@@ -154,7 +154,8 @@ function normalizeBooking(item, location) {
   const name = property.name || item.name || `Booking.com stay in ${location}`;
   const type = property.type || item.accommodation_type || item.type || 'ACCOMMODATION';
   const bookingUrl = item.url || item.booking_url || property.url || null;
-  return { id: String(property.id || item.id || name), name, address: property.address || item.address || location, rating: review, reviewCount: Number(item.review_count || item.reviewCount || property.review_count || 0), category: String(type).replace(/_/g, ' ').toUpperCase(), price: price.amount || price.total || null, currency: price.currency || bookingCurrency, available: true, mapsUrl: bookingUrl };
+  const imageUrl = item.image_url || item.imageUrl || property.image_url || property.imageUrl || (Array.isArray(item.images) && item.images[0]?.url) || null;
+  return { id: String(property.id || item.id || name), name, address: property.address || item.address || location, rating: review, reviewCount: Number(item.review_count || item.reviewCount || property.review_count || 0), category: String(type).replace(/_/g, ' ').toUpperCase(), price: price.amount || price.total || null, currency: price.currency || bookingCurrency, available: true, mapsUrl: bookingUrl, imageUrl };
 }
 
 function serveStatic(res, pathname) {
