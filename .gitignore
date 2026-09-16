@@ -1,2 +1,4 @@
 .env
 .freebuff/
+data/listings.json
+data/listings.csv

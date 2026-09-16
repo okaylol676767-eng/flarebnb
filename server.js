@@ -107,6 +107,45 @@ async function bookingSearch({ location, checkin, checkout, adults, rooms }) {
   return { destination: destination.name || location, listings: (result.data || []).map(item => normalizeBooking(item, destination.name || location)) };
 }
 
+function parseCsv(text) {
+  const lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const headers = lines[0].split(',').map(value => value.trim());
+  return lines.slice(1).map(line => {
+    const values = line.split(',').map(value => value.trim().replace(/^"|"$/g, ''));
+    return Object.fromEntries(headers.map((header, index) => [header, values[index] || '']));
+  });
+}
+
+function readLocalCatalog() {
+  const jsonPath = path.join(ROOT, 'data', 'listings.json');
+  const csvPath = path.join(ROOT, 'data', 'listings.csv');
+  const examplePath = path.join(ROOT, 'data', 'listings.example.json');
+  if (fs.existsSync(jsonPath)) return { items: JSON.parse(fs.readFileSync(jsonPath, 'utf8')), demo: false };
+  if (fs.existsSync(csvPath)) return { items: parseCsv(fs.readFileSync(csvPath, 'utf8')), demo: false };
+  if (fs.existsSync(examplePath)) return { items: JSON.parse(fs.readFileSync(examplePath, 'utf8')), demo: true };
+  throw new Error('No local catalog found. Add data/listings.json or data/listings.csv.');
+}
+
+function localCatalogSearch({ location, checkin, checkout, adults }) {
+  const requestedStart = new Date(checkin);
+  const requestedEnd = new Date(checkout);
+  const normalizedLocation = location.toLowerCase();
+  const catalog = readLocalCatalog();
+  const listings = catalog.items.filter(item => {
+    const matchesLocation = String(item.location || '').toLowerCase().includes(normalizedLocation) || normalizedLocation.includes(String(item.location || '').toLowerCase());
+    const available = item.available !== false && String(item.available).toLowerCase() !== 'false';
+    const capacity = Number(item.maxGuests || item.guests || 0) >= Number(adults || 1);
+    const availableFrom = item.availableFrom ? new Date(item.availableFrom) : null;
+    const availableTo = item.availableTo ? new Date(item.availableTo) : null;
+    const datesFit = (!availableFrom || requestedStart >= availableFrom) && (!availableTo || requestedEnd <= availableTo);
+    return matchesLocation && available && capacity && datesFit;
+  }).map(item => ({
+    id: String(item.id), name: item.name, address: item.address || item.location, category: String(item.category || 'ACCOMMODATION').toUpperCase(), rating: Number(item.rating) || null, reviewCount: Number(item.reviewCount) || 0, price: item.price || null, currency: item.currency || 'USD', available: true, mapsUrl: item.bookingUrl || null, imageUrl: item.imageUrl || null
+  })).sort((a, b) => (b.rating || 0) - (a.rating || 0));
+  return { destination: location, listings, demo: catalog.demo };
+}
+
 function normalizeBooking(item, location) {
   const property = item.property || item.accommodation || {};
   const price = item.price || item.cheapest_room?.price || {};
@@ -129,6 +168,14 @@ function serveStatic(res, pathname) {
 
 const server = http.createServer(async (req, res) => {
   const requestUrl = new URL(req.url, `http://${req.headers.host || HOST}`);
+  if (requestUrl.pathname === '/api/local/search') {
+    const location = requestUrl.searchParams.get('location')?.trim();
+    const checkin = requestUrl.searchParams.get('checkin');
+    const checkout = requestUrl.searchParams.get('checkout');
+    const adults = Math.max(1, Number(requestUrl.searchParams.get('adults') || 2));
+    if (!location || !checkin || !checkout) return send(res, 400, { error: 'Location, check-in, and check-out are required.' });
+    try { return send(res, 200, { ...localCatalogSearch({ location, checkin, checkout, adults }), source: 'authorized-catalog', mode: 'local' }); } catch (error) { return send(res, 503, { error: error.message, source: 'authorized-catalog' }); }
+  }
   if (requestUrl.pathname === '/api/booking/search') {
     if (!bookingToken || !bookingAffiliateId) return send(res, 503, { error: 'Booking.com credentials are not configured. Set BOOKING_API_TOKEN and BOOKING_AFFILIATE_ID in .env.' });
     const location = requestUrl.searchParams.get('location')?.trim();
