@@ -11,20 +11,13 @@ A cyber-brutalist lodging reconnaissance interface with simulated telemetry and 
    GOOGLE_MAPS_API_KEY=your_rotated_key_here
    ```
 
-3. Export the variable in your shell, or use a dotenv runner, then start the server:
+3. Start the server. It automatically reads the local `.env` file:
 
-   **PowerShell:**
-
-   ```powershell
-   $env:GOOGLE_MAPS_API_KEY="your_rotated_key_here"
+   ```bash
    node server.js
    ```
 
-   **macOS/Linux:**
-
-   ```bash
-   GOOGLE_MAPS_API_KEY="your_rotated_key_here" node server.js
-   ```
+   You can also provide `GOOGLE_MAPS_API_KEY` directly through your shell environment if preferred.
 
 4. Open http://127.0.0.1:8080.
 
