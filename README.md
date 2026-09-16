@@ -1,15 +1,19 @@
 # FLARE_BNB
 
-A cyber-brutalist lodging reconnaissance interface with simulated telemetry and an optional Google Places lodging index.
+A cyber-brutalist lodging reconnaissance interface with simulated telemetry and Booking.com lodging search in sandbox or production mode.
 
 ## Run locally
 
-1. Enable **Places API (New)** in Google Cloud and create a restricted API key. Do not commit the key.
-2. Copy `.env.example` to `.env` and set the rotated key:
+1. Register as a Booking.com Managed Affiliate Partner and obtain your API token and Affiliate ID.
+2. Copy `.env.example` to `.env` and set private credentials:
 
    ```text
-   GOOGLE_MAPS_API_KEY=your_rotated_key_here
+   BOOKING_API_TOKEN=your_booking_token
+   BOOKING_AFFILIATE_ID=your_affiliate_id
+   BOOKING_API_MODE=sandbox
    ```
+
+   Use `BOOKING_API_MODE=production` only after your affiliate integration is approved and tested. Google Places remains optional for nearby-location discovery.
 
 3. Start the server. It automatically reads the local `.env` file:
 
@@ -21,4 +25,4 @@ A cyber-brutalist lodging reconnaissance interface with simulated telemetry and 
 
 4. Open http://127.0.0.1:8080.
 
-The server keeps the API key on the backend and proxies destination and nearby lodging searches. Results are categorized as hotels, resorts, or vacation rentals and sorted by rating; the interface includes 4.0+ and 4.5+ rating filters.
+The server keeps credentials on the backend and proxies Booking.com destination resolution plus date-based accommodation availability. Results include open-for-booking status, prices, categories, ratings, review counts, and booking links; the interface includes 4.0+ and 4.5+ rating filters. The local default is sandbox mode; switch to production with `BOOKING_API_MODE=production`.
